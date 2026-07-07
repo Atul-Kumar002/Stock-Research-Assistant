@@ -78,16 +78,23 @@ def run_agent_pipeline(ticker: str) -> Dict[str, Any]:
         beta_val = 1.0
     risk_metrics = stock_service.calculate_risk_metrics(prices_df, beta_fallback=beta_val)
     
-    # 4. Execute agents in sequence (fast local computations)
-    news_out = news_agent.analyze(ticker_upper, news_articles)
-    fin_out = financial_agent.analyze(ticker_upper, stock_data)
-    tech_out = technical_agent.analyze(ticker_upper, tech_data)
-    sent_out = sentiment_agent.analyze(ticker_upper, news_articles)
-    sec_out = sec_agent.analyze(ticker_upper, sector)
-    earn_out = earnings_agent.analyze(ticker_upper, sector)
-    macro_out = macro_agent.analyze(ticker_upper, sector)
-    insider_out = insider_agent.analyze(ticker_upper)
-    risk_out = risk_agent.analyze(ticker_upper, risk_metrics)
+    # 4. Execute agents in parallel (each executes a blocking LLM call, so they are run in parallel threads)
+    async def run_parallel():
+        tasks = [
+            asyncio.to_thread(news_agent.analyze, ticker_upper, news_articles),
+            asyncio.to_thread(financial_agent.analyze, ticker_upper, stock_data),
+            asyncio.to_thread(technical_agent.analyze, ticker_upper, tech_data),
+            asyncio.to_thread(sentiment_agent.analyze, ticker_upper, news_articles),
+            asyncio.to_thread(sec_agent.analyze, ticker_upper, sector),
+            asyncio.to_thread(earnings_agent.analyze, ticker_upper, sector),
+            asyncio.to_thread(macro_agent.analyze, ticker_upper, sector),
+            asyncio.to_thread(insider_agent.analyze, ticker_upper),
+            asyncio.to_thread(risk_agent.analyze, ticker_upper, risk_metrics),
+        ]
+        return await asyncio.gather(*tasks)
+
+    results = asyncio.run(run_parallel())
+    news_out, fin_out, tech_out, sent_out, sec_out, earn_out, macro_out, insider_out, risk_out = results
     
     # Bundle intermediate results for Recommendation Agent
     agent_outputs = {
