@@ -1,5 +1,8 @@
 import uvicorn
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 if __name__ == "__main__":
     # Ensure port is an integer
