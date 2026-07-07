@@ -1,4 +1,168 @@
-<!DOCTYPE html><html lang="en" class="text-ink"><head><script>
+<!DOCTYPE html><html lang="en" class="text-ink"><head><style>
+  /* Premium Glassmorphism & Hover transitions for all themes */
+  .bg-surface-card {
+    backdrop-filter: blur(12px) !important;
+    background-color: rgba(10, 10, 12, 0.8) !important;
+  }
+  .light .bg-surface-card {
+    background-color: rgba(255, 255, 255, 0.8) !important;
+  }
+  .bg-surface-card, button, input, select, a {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  .bg-surface-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  }
+  .light .bg-surface-card:hover {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Vibrant atmospheric glows */
+  .glow-orange {
+    background: radial-gradient(circle at top, rgba(255, 128, 31, 0.15) 0%, transparent 65%) !important;
+  }
+  .glow-blue {
+    background: radial-gradient(circle at top, rgba(59, 158, 255, 0.18) 0%, transparent 65%) !important;
+  }
+  .glow-green {
+    background: radial-gradient(circle at top, rgba(34, 255, 153, 0.15) 0%, transparent 65%) !important;
+  }
+  .glow-red {
+    background: radial-gradient(circle at top, rgba(255, 32, 71, 0.18) 0%, transparent 65%) !important;
+  }
+  .glow-yellow {
+    background: radial-gradient(circle at top, rgba(255, 197, 61, 0.15) 0%, transparent 65%) !important;
+  }
+  .glow-gray {
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.08) 0%, transparent 65%) !important;
+  }
+
+  /* Light Theme Polish */
+  .light, [data-theme=light] {
+    --color-canvas: #f8f9fa;
+    --color-surface-card: #ffffff;
+    --color-surface-elevated: #f1f3f5;
+    --color-surface-deep: #e9ecef;
+    --color-ink: #121416;
+    --color-body-text: #212529;
+    --color-charcoal: #495057;
+    --color-mute: #6c757d;
+    --color-ash: #adb5bd;
+    --color-stone: #dee2e6;
+    --color-hairline: rgba(0, 0, 0, 0.07);
+    --color-hairline-strong: rgba(0, 0, 0, 0.14);
+    --color-divider-soft: rgba(0, 0, 0, 0.03);
+  }
+
+  /* Light mode header styling */
+  .light header {
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    border-color: var(--color-hairline) !important;
+    backdrop-filter: blur(16px) !important;
+  }
+  .light header a, .light header nav a, .light header span {
+    color: var(--color-ink) !important;
+  }
+  .light header button {
+    background-color: var(--color-surface-elevated) !important;
+    border-color: var(--color-hairline) !important;
+    color: var(--color-ink) !important;
+  }
+
+  /* Light mode main overrides */
+  .light main .bg-black {
+    background-color: var(--color-surface-deep) !important;
+    border-color: var(--color-hairline-strong) !important;
+    color: var(--color-ink) !important;
+  }
+  .light main .bg-black span {
+    color: var(--color-body-text) !important;
+  }
+  .light main .bg-black .text-mute {
+    color: var(--color-charcoal) !important;
+  }
+  .light main input, .light main select {
+    background-color: var(--color-surface-card) !important;
+    border-color: var(--color-hairline-strong) !important;
+    color: var(--color-ink) !important;
+  }
+
+  /* Tailwind prose list elements in light mode */
+  .light .prose-invert {
+    color: var(--color-body-text) !important;
+  }
+  .light .prose-invert h1, 
+  .light .prose-invert h2, 
+  .light .prose-invert h3, 
+  .light .prose-invert h4, 
+  .light .prose-invert h5, 
+  .light .prose-invert h6, 
+  .light .prose-invert strong {
+    color: var(--color-ink) !important;
+  }
+
+  /* Light mode scrollbars */
+  .light ::-webkit-scrollbar-track {
+    background: var(--color-surface-deep) !important;
+  }
+  .light ::-webkit-scrollbar-thumb {
+    background: var(--color-stone) !important;
+  }
+  .light ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-mute) !important;
+  }
+
+  /* Chatbot styles for light mode */
+  .light .fixed.bottom-6 > button {
+    background-color: var(--color-ink) !important;
+    color: var(--color-canvas) !important;
+    border: 1px solid var(--color-hairline-strong) !important;
+  }
+  .light .fixed.bottom-6 > button svg {
+    color: var(--color-canvas) !important;
+    stroke: var(--color-canvas) !important;
+  }
+  .light .fixed.bottom-6 .bg-\[\#0c0c0e\]\/95 {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    border-color: var(--color-hairline-strong) !important;
+    color: var(--color-ink) !important;
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.15), 0 10px 20px -10px rgba(0, 0, 0, 0.1) !important;
+  }
+  .light .fixed.bottom-6 .bg-\[\#060608\] {
+    background-color: var(--color-surface-elevated) !important;
+    border-color: var(--color-hairline) !important;
+  }
+  .light .fixed.bottom-6 .bg-\[\#060608\]\/40, 
+  .light .fixed.bottom-6 .bg-\[\#060608\]\/60 {
+    background-color: var(--color-surface-deep) !important;
+    border-color: var(--color-hairline) !important;
+  }
+  .light .fixed.bottom-6 .text-ink {
+    color: var(--color-ink) !important;
+  }
+  .light .fixed.bottom-6 .text-body-text {
+    color: var(--color-body-text) !important;
+  }
+  .light .fixed.bottom-6 .bg-surface-deep {
+    background-color: var(--color-surface-deep) !important;
+    border-color: var(--color-hairline) !important;
+    color: var(--color-body-text) !important;
+  }
+  .light .fixed.bottom-6 input {
+    background-color: var(--color-surface-card) !important;
+    border-color: var(--color-hairline-strong) !important;
+    color: var(--color-ink) !important;
+  }
+  .light .fixed.bottom-6 button[type="submit"] {
+    background-color: var(--color-ink) !important;
+    color: var(--color-canvas) !important;
+  }
+  .light .fixed.bottom-6 button[type="submit"] svg {
+    color: var(--color-canvas) !important;
+    stroke: var(--color-canvas) !important;
+  }
+</style><script>
   window.BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:8000'
     : '';
