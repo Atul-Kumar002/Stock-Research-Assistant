@@ -1,6 +1,6 @@
 # Multi-Agent Stock Assistant
 
-Website Link: [https://github.com/Atul-Kumar002/Multi-Stock-Research-Assistant](https://stock-research-assistant-smoky.vercel.app/)
+[Website Link](https://stock-research-assistant-smoky.vercel.app/)
 
 ## Installation
 
