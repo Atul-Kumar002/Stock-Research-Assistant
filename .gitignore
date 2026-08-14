@@ -63,11 +63,13 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
-# Build output
-dist/
+# Build output — excluded by default
 .build/
 out/
 .output/
+# frontend/dist is the deployable artifact for Vercel (no build step)
+# so it IS tracked. Only exclude other dist folders:
+backend/dist/
 
 # Astro
 .astro/

@@ -1,7 +1,4 @@
 {
-  "outputDirectory": "frontend/dist",
-  "buildCommand": "",
-  "installCommand": "",
   "cleanUrls": true,
   "rewrites": [
     {
