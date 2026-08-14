@@ -3,39 +3,56 @@ import pandas as pd
 import numpy as np
 import datetime
 from typing import Dict, Any, List
+from .cache_service import backend_cache
 
 def get_stock_data(ticker: str) -> Dict[str, Any]:
     """
-    Fetch comprehensive stock data from yfinance
+    Fetch comprehensive stock data from yfinance with TTL caching
     """
+    ticker_clean = ticker.upper().strip()
+    cache_key = f"stock_data:{ticker_clean}"
+    cached = backend_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     try:
-        t = yf.Ticker(ticker)
+        t = yf.Ticker(ticker_clean)
         info = t.info
         
         # Fallback for empty info
         if not info or 'symbol' not in info:
-            # Try to search or reconstruct
-            info = {"symbol": ticker.upper(), "shortName": ticker.upper()}
+            info = {"symbol": ticker_clean, "shortName": ticker_clean}
             
-        return {
+        result = {
             "info": info,
-            "ticker": ticker.upper()
+            "ticker": ticker_clean
         }
+        backend_cache.set(cache_key, result, ttl_seconds=300) # 5 min TTL
+        return result
     except Exception as e:
         print(f"Error fetching data for {ticker}: {e}")
-        return {"info": {"symbol": ticker.upper(), "shortName": ticker.upper()}, "ticker": ticker.upper()}
+        fallback = {"info": {"symbol": ticker_clean, "shortName": ticker_clean}, "ticker": ticker_clean}
+        return fallback
 
 def get_historical_prices(ticker: str, period: str = "1y") -> pd.DataFrame:
     """
-    Get historical prices as a pandas DataFrame
+    Get historical prices as a pandas DataFrame with TTL caching
     """
+    ticker_clean = ticker.upper().strip()
+    cache_key = f"stock_history:{ticker_clean}:{period}"
+    cached = backend_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     try:
-        t = yf.Ticker(ticker)
+        t = yf.Ticker(ticker_clean)
         df = t.history(period=period)
+        backend_cache.set(cache_key, df, ttl_seconds=120) # 2 min TTL
         return df
     except Exception as e:
         print(f"Error fetching history for {ticker}: {e}")
         return pd.DataFrame()
+
 
 def calculate_technical_indicators(df: pd.DataFrame) -> Dict[str, Any]:
     """
@@ -178,10 +195,16 @@ def calculate_risk_metrics(df: pd.DataFrame, beta_fallback: float = 1.0) -> Dict
 
 def get_stock_news(ticker: str) -> List[Dict[str, Any]]:
     """
-    Fetch and parse news articles for the stock ticker
+    Fetch and parse news articles for the stock ticker with TTL caching
     """
+    ticker_clean = ticker.upper().strip()
+    cache_key = f"stock_news:{ticker_clean}"
+    cached = backend_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     try:
-        t = yf.Ticker(ticker)
+        t = yf.Ticker(ticker_clean)
         raw_news = t.news
         if not raw_news:
             return []
@@ -225,7 +248,9 @@ def get_stock_news(ticker: str) -> List[Dict[str, Any]]:
                 "score": score,
                 "summary": f"Key reports state {title} could significantly shape market performance."
             })
+        backend_cache.set(cache_key, articles, ttl_seconds=600) # 10 min TTL
         return articles
     except Exception as e:
         print(f"Error fetching news for {ticker}: {e}")
         return []
+

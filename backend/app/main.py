@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 import uvicorn
 
 from .database import init_db, get_db, Watchlist, SearchHistory, SavedPortfolio, ChatHistory
-from .agents.orchestrator import run_agent_pipeline
+from .agents.orchestrator import run_agent_pipeline, get_stock_quote_and_metrics
 from .agents.llm_helper import generate_text
 
 # Initialize DB on startup
@@ -108,10 +108,35 @@ def search_stocks(q: str = Query("", min_length=0), db: Session = Depends(get_db
         
     return results
 
+@app.get("/api/stock/{ticker}/quote")
+def get_stock_quote(ticker: str):
+    """
+    Fast endpoint returning stock header, current price, change %, price history, technical indicators, and risk metrics.
+    Response target: < 300ms - 800ms.
+    """
+    ticker_clean = ticker.strip().upper()
+    try:
+        quote = get_stock_quote_and_metrics(ticker_clean)
+        return quote
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch stock quote: {str(e)}")
+
+@app.get("/api/stock/{ticker}/research")
+def get_stock_research(ticker: str):
+    """
+    Endpoint returning deep AI multi-agent research, sentiment, SEC risks, and debate transcript.
+    """
+    ticker_clean = ticker.strip().upper()
+    try:
+        analysis_results = run_agent_pipeline(ticker_clean)
+        return analysis_results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to run agent research pipeline: {str(e)}")
+
 @app.get("/api/stock/{ticker}")
 def analyze_stock(ticker: str, db: Session = Depends(get_db)):
     """
-    Run multi-agent analysis for a specific ticker
+    Unified multi-agent analysis endpoint for backward compatibility
     """
     ticker_clean = ticker.strip().upper()
     try:
