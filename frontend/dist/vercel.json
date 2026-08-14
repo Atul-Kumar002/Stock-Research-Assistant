@@ -1,9 +1,0 @@
-{
-  "cleanUrls": true,
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://stock-research-assistant-z1ad.onrender.com/api/:path*"
-    }
-  ]
-}

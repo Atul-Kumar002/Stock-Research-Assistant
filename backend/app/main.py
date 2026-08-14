@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 import uvicorn
+import yfinance as yf
 
 from .database import init_db, get_db, Watchlist, SearchHistory, SavedPortfolio, ChatHistory
 from .agents.orchestrator import run_agent_pipeline, get_stock_quote_and_metrics
@@ -27,18 +28,81 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Popular stocks database for autocomplete and search
+# Popular stocks shown when search box is empty.
+# Prices are intentionally 0 — they get replaced with live data by resolve_ticker_live().
 POPULAR_STOCKS = [
-    {"ticker": "AAPL", "name": "Apple Inc.", "sector": "Technology", "price": 192.50, "currency": "USD"},
-    {"ticker": "NVDA", "name": "NVIDIA Corporation", "sector": "Technology", "price": 125.20, "currency": "USD"},
-    {"ticker": "TSLA", "name": "Tesla, Inc.", "sector": "Consumer Cyclical", "price": 178.90, "currency": "USD"},
-    {"ticker": "RELIANCE", "name": "Reliance Industries Ltd.", "sector": "Energy/Conglomerate", "price": 2950.00, "currency": "INR"},
-    {"ticker": "INFY", "name": "Infosys Limited", "sector": "Technology", "price": 18.50, "currency": "USD"},
-    {"ticker": "MSFT", "name": "Microsoft Corporation", "sector": "Technology", "price": 420.30, "currency": "USD"},
-    {"ticker": "AMZN", "name": "Amazon.com, Inc.", "sector": "Consumer Cyclical", "price": 185.10, "currency": "USD"},
-    {"ticker": "GOOGL", "name": "Alphabet Inc.", "sector": "Technology", "price": 175.40, "currency": "USD"},
-    {"ticker": "AMD", "name": "Advanced Micro Devices, Inc.", "sector": "Technology", "price": 160.80, "currency": "USD"}
+    # US Large Cap / Tech
+    {"ticker": "AAPL",  "name": "Apple Inc.",                     "sector": "Technology",          "currency": "USD"},
+    {"ticker": "MSFT",  "name": "Microsoft Corporation",          "sector": "Technology",          "currency": "USD"},
+    {"ticker": "NVDA",  "name": "NVIDIA Corporation",             "sector": "Technology",          "currency": "USD"},
+    {"ticker": "GOOGL", "name": "Alphabet Inc.",                  "sector": "Technology",          "currency": "USD"},
+    {"ticker": "AMZN",  "name": "Amazon.com, Inc.",               "sector": "Consumer Cyclical",   "currency": "USD"},
+    {"ticker": "META",  "name": "Meta Platforms, Inc.",           "sector": "Technology",          "currency": "USD"},
+    {"ticker": "TSLA",  "name": "Tesla, Inc.",                    "sector": "Consumer Cyclical",   "currency": "USD"},
+    {"ticker": "AMD",   "name": "Advanced Micro Devices, Inc.",   "sector": "Technology",          "currency": "USD"},
+    {"ticker": "INTC",  "name": "Intel Corporation",              "sector": "Technology",          "currency": "USD"},
+    {"ticker": "NFLX",  "name": "Netflix, Inc.",                  "sector": "Communication",       "currency": "USD"},
+    {"ticker": "JPM",   "name": "JPMorgan Chase & Co.",           "sector": "Financial Services",  "currency": "USD"},
+    {"ticker": "BAC",   "name": "Bank of America Corp.",          "sector": "Financial Services",  "currency": "USD"},
+    {"ticker": "V",     "name": "Visa Inc.",                      "sector": "Financial Services",  "currency": "USD"},
+    {"ticker": "JNJ",   "name": "Johnson & Johnson",              "sector": "Healthcare",          "currency": "USD"},
+    {"ticker": "WMT",   "name": "Walmart Inc.",                   "sector": "Consumer Defensive",  "currency": "USD"},
+    # Indian stocks (NSE)
+    {"ticker": "RELIANCE.NS", "name": "Reliance Industries Ltd.", "sector": "Energy",              "currency": "INR"},
+    {"ticker": "TCS.NS",      "name": "Tata Consultancy Services","sector": "Technology",          "currency": "INR"},
+    {"ticker": "INFY.NS",     "name": "Infosys Limited",          "sector": "Technology",          "currency": "INR"},
+    {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Limited",        "sector": "Financial Services",  "currency": "INR"},
+    {"ticker": "ICICIBANK.NS","name": "ICICI Bank Limited",       "sector": "Financial Services",  "currency": "INR"},
+    {"ticker": "WIPRO.NS",    "name": "Wipro Limited",            "sector": "Technology",          "currency": "INR"},
+    {"ticker": "BAJFINANCE.NS","name": "Bajaj Finance Limited",   "sector": "Financial Services",  "currency": "INR"},
+    {"ticker": "TATAMOTORS.NS","name": "Tata Motors Limited",     "sector": "Consumer Cyclical",   "currency": "INR"},
+    # Keep short aliases for the Indian tickers so bare "RELIANCE" still matches
+    {"ticker": "RELIANCE", "name": "Reliance Industries Ltd.",    "sector": "Energy",              "currency": "INR"},
+    {"ticker": "INFY",     "name": "Infosys Limited",             "sector": "Technology",          "currency": "USD"},
 ]
+
+
+def resolve_ticker_live(ticker: str) -> Dict[str, Any]:
+    """
+    Fetch real name, sector, price and currency for a ticker via yfinance.
+    Falls back gracefully if yfinance cannot resolve the symbol.
+    """
+    try:
+        t = yf.Ticker(ticker)
+        info = t.info or {}
+        short_name = (
+            info.get("shortName")
+            or info.get("longName")
+            or info.get("displayName")
+        )
+        # yfinance returns an empty / minimal dict for invalid tickers
+        if not short_name:
+            return {}
+
+        price = (
+            info.get("regularMarketPrice")
+            or info.get("currentPrice")
+            or info.get("previousClose")
+            or 0.0
+        )
+        return {
+            "ticker": ticker.upper(),
+            "name": short_name,
+            "sector": info.get("sector") or info.get("industry") or "N/A",
+            "price": round(float(price), 2),
+            "currency": info.get("currency", "USD"),
+        }
+    except Exception as e:
+        print(f"[resolve_ticker_live] Error for {ticker}: {e}")
+        return {}
+
+
+def enrich_with_live_price(stock: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Add a live price field to a stock dict that only has static metadata.
+    """
+    live = resolve_ticker_live(stock["ticker"])
+    return {**stock, "price": live.get("price", 0.0)} if live else {**stock, "price": 0.0}
 
 # Request models
 class PortfolioRequest(BaseModel):
@@ -58,7 +122,6 @@ def get_exchange_rate():
     Fetch real-time USD to INR exchange rate from yfinance
     """
     try:
-        import yfinance as yf
         ticker = yf.Ticker("USDINR=X")
         history = ticker.history(period="1d")
         if not history.empty:
@@ -73,39 +136,60 @@ def get_exchange_rate():
 @app.get("/api/search")
 def search_stocks(q: str = Query("", min_length=0), db: Session = Depends(get_db)):
     """
-    Search stocks with autocomplete support
+    Search stocks with autocomplete support.
+
+    Strategy:
+    1. Empty query → return the popular list (with live prices).
+    2. Query matches ticker/name in popular list → return those matches with live prices.
+    3. Query doesn't match popular list → try yfinance live lookup for the raw query string.
+       This makes any valid exchange ticker (e.g. META, NFLX, TCS.NS, HDFC) discoverable.
+    4. Nothing found → return an empty list (the frontend shows "Press Enter to search").
     """
     q_clean = q.strip().upper()
-    
-    # Save search count in DB for analytics/popular list
+
+    # Track search analytics
     if q_clean:
-        hist = db.query(SearchHistory).filter(SearchHistory.ticker == q_clean).first()
-        if hist:
-            hist.query_count += 1
-        else:
-            hist = SearchHistory(ticker=q_clean)
-            db.add(hist)
-        db.commit()
-        
+        try:
+            hist = db.query(SearchHistory).filter(SearchHistory.ticker == q_clean).first()
+            if hist:
+                hist.query_count += 1
+            else:
+                hist = SearchHistory(ticker=q_clean)
+                db.add(hist)
+            db.commit()
+        except Exception:
+            pass  # analytics failure must never break search
+
+    # Empty query: return popular stocks with live prices
     if not q_clean:
-        return POPULAR_STOCKS
-        
+        # Deduplicate by ticker before returning
+        seen = set()
+        unique = []
+        for s in POPULAR_STOCKS:
+            if s["ticker"] not in seen:
+                seen.add(s["ticker"])
+                unique.append(s)
+        return unique
+
+    # Step 1: substring match against the popular list (fast, no network)
     results = []
+    seen_tickers = set()
     for stock in POPULAR_STOCKS:
-        if q_clean in stock["ticker"] or q_clean in stock["name"].upper():
+        ticker_match = q_clean in stock["ticker"].upper()
+        name_match   = q_clean in stock["name"].upper()
+        if (ticker_match or name_match) and stock["ticker"] not in seen_tickers:
+            seen_tickers.add(stock["ticker"])
             results.append(stock)
-            
-    # If no results in our popular list, return the ticker itself as a custom option
-    if not results and len(q_clean) <= 6:
-        currency = "INR" if (q_clean.endswith(".NS") or q_clean.endswith(".BO") or q_clean == "RELIANCE") else "USD"
-        results.append({
-            "ticker": q_clean,
-            "name": f"{q_clean} Corporation",
-            "sector": "General Sector",
-            "price": 100.00,
-            "currency": currency
-        })
-        
+
+    # Step 2: live yfinance lookup for any ticker not already covered
+    # Try the query as-is (handles "INFY", "TCS.NS", "HDFCBANK.NS", etc.)
+    if not results or (len(results) == 1 and results[0]["ticker"] == q_clean):
+        # Only do a live lookup when the query looks like a ticker symbol (≤ 12 chars, no spaces)
+        if len(q_clean) <= 12 and " " not in q_clean:
+            live = resolve_ticker_live(q_clean)
+            if live and live["ticker"] not in seen_tickers:
+                results = [live] + [r for r in results if r["ticker"] != live["ticker"]]
+
     return results
 
 @app.get("/api/stock/{ticker}/quote")
@@ -148,30 +232,40 @@ def analyze_stock(ticker: str, db: Session = Depends(get_db)):
 @app.get("/api/watchlist")
 def get_watchlist(db: Session = Depends(get_db)):
     """
-    Get all watchlisted tickers
+    Get all watchlisted tickers with live prices from yfinance.
     """
     items = db.query(Watchlist).all()
-    # Populate with current names & prices
     enriched_items = []
     for item in items:
-        # Find in popular or fallback
+        # First try the popular list for static metadata (name, sector)
         match = next((s for s in POPULAR_STOCKS if s["ticker"] == item.ticker), None)
         if match:
+            base = dict(match)
+        else:
+            base = {
+                "ticker": item.ticker,
+                "name": item.ticker,
+                "sector": "N/A",
+                "currency": "INR" if (item.ticker.endswith(".NS") or item.ticker.endswith(".BO")) else "USD",
+            }
+
+        # Always fetch live price — never use stale hardcoded values
+        live = resolve_ticker_live(item.ticker)
+        if live:
             enriched_items.append({
                 "ticker": item.ticker,
-                "name": match["name"],
-                "price": match["price"],
-                "sector": match["sector"],
-                "currency": match.get("currency", "USD")
+                "name":     live.get("name",     base.get("name",   item.ticker)),
+                "price":    live.get("price",    0.0),
+                "sector":   live.get("sector",   base.get("sector", "N/A")),
+                "currency": live.get("currency", base.get("currency", "USD")),
             })
         else:
-            currency = "INR" if (item.ticker.endswith(".NS") or item.ticker.endswith(".BO") or item.ticker == "RELIANCE") else "USD"
             enriched_items.append({
-                "ticker": item.ticker,
-                "name": f"{item.ticker} Corp",
-                "price": 100.00,
-                "sector": "General Sector",
-                "currency": currency
+                "ticker":   item.ticker,
+                "name":     base.get("name",     item.ticker),
+                "price":    0.0,
+                "sector":   base.get("sector",   "N/A"),
+                "currency": base.get("currency", "USD"),
             })
     return enriched_items
 
