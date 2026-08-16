@@ -189,21 +189,33 @@ function getInstantStockQuote(ticker) {
 
 function BI(){
 
-  let [e, t] = (0, b.useState)(`NVDA`),
+  let [e, setTickerState] = (0, b.useState)(`NVDA`),
       [n, r] = (0, b.useState)(()=>getInstantStockQuote(`NVDA`)),
       [i, a] = (0, b.useState)(!1),
       [rL, setRL] = (0, b.useState)(!1),
       [o, s] = (0, b.useState)([]),
       [c, l] = (0, b.useState)([]),
       [u, d] = (0, b.useState)(`USD`),
-      [f, p] = (0, b.useState)(83.5);
+      [f, p] = (0, b.useState)(83.5),
+      [refreshKey, setRefreshKey] = (0, b.useState)(0);
 
   const abortRef = (0, b.useRef)(null);
+  const selectStock = rawTicker => {
+    if (!rawTicker) return;
+    const ticker = rawTicker.toUpperCase().trim();
+    if (!ticker) return;
+    r(getInstantStockQuote(ticker));
+    a(true);
+    setRL(true);
+    setTickerState(ticker);
+    setRefreshKey(value => value + 1);
+  };
+  const t = selectStock;
 
   (0, b.useEffect)(() => {
     m();
     let initialTicker = new URLSearchParams(window.location.search).get(`ticker`);
-    initialTicker && t(initialTicker.toUpperCase());
+    initialTicker && selectStock(initialTicker);
     let curr = localStorage.getItem(`finance_assistant_currency`) || `USD`;
     d(curr);
     let exRate = localStorage.getItem(`finance_assistant_exchange_rate`);
@@ -222,9 +234,12 @@ function BI(){
     })();
     let onCurr = ev => { d(ev.detail || localStorage.getItem(`finance_assistant_currency`) || `USD`); };
     window.addEventListener(`currencyChange`, onCurr);
-    let onTickerSelect = ev => { if (ev.detail) t(ev.detail.toUpperCase()); };
+    let onTickerSelect = ev => { if (ev.detail) selectStock(ev.detail); };
     window.addEventListener(`tickerSelect`, onTickerSelect);
-    return () => window.removeEventListener(`currencyChange`, onCurr);
+    return () => {
+      window.removeEventListener(`currencyChange`, onCurr);
+      window.removeEventListener(`tickerSelect`, onTickerSelect);
+    };
   }, []);
 
   let m = async () => {
@@ -307,7 +322,7 @@ function BI(){
         }
       }
     })();
-  }, [e]);
+  }, [e, refreshKey]);
 
   return (0,x.jsxs)(`div`,{className:`w-full flex flex-col gap-4`,children:[(0,x.jsx)(S,{onSelectStock:t,selectedTicker:e,watchlist:o,onToggleWatchlist:async e=>{let t=e.toUpperCase(),n=o.includes(t);try{let e=n?`DELETE`:`POST`;(await fetch(`${(window.BACKEND_URL !== undefined ? window.BACKEND_URL : (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:8000' : ''))}/api/watchlist/${t}`,{method:e})).ok&&m()}catch(e){console.error(`Watchlist toggle offline:`,e);let r=[...o];n?r=r.filter(e=>e!==t):r.push(t),s(r),localStorage.setItem(`alphamind_watchlist`,JSON.stringify(r)),l(r.map(e=>({ticker:e,name:`${e} Corp`,price:e===`NVDA`?125.2:e===`AAPL`?192.5:e===`RELIANCE`?2950:100,sector:`General`,currency:e===`RELIANCE`?`INR`:`USD`})))}},currency:u,exchangeRate:f}),(0,x.jsxs)(`div`,{style:{display:`grid`,gridTemplateColumns:`220px 1fr 220px`,gap:`1.5rem`,alignItems:`start`},children:[(0,x.jsxs)(`div`,{className:`bg-surface-card border border-hairline-strong rounded-lg p-4 flex flex-col gap-2`,style:{minWidth:0},children:[(0,x.jsxs)(`div`,{className:`flex items-center gap-1.5 border-b border-hairline pb-3 mb-1`,children:[(0,x.jsx)(h,{className:`h-3.5 w-3.5 text-mute`}),(0,x.jsx)(`span`,{className:`font-semibold text-ink text-xs uppercase tracking-widest`,children:`Companies`})]}),(0,x.jsxs)(`div`,{style:{display:`flex`,flexDirection:`column`,gap:`2px`,maxHeight:`72vh`,overflowY:`auto`,paddingRight:`4px`},children:[([{ticker:`AAPL`,name:`Apple Inc.`},{ticker:`MSFT`,name:`Microsoft`},{ticker:`NVDA`,name:`NVIDIA`},{ticker:`GOOGL`,name:`Alphabet`},{ticker:`AMZN`,name:`Amazon`},{ticker:`META`,name:`Meta Platforms`},{ticker:`TSLA`,name:`Tesla`},{ticker:`AMD`,name:`AMD`},{ticker:`NFLX`,name:`Netflix`},{ticker:`JPM`,name:`JPMorgan`},{ticker:`BAC`,name:`Bank of America`},{ticker:`V`,name:`Visa`},{ticker:`JNJ`,name:`Johnson & Johnson`},{ticker:`WMT`,name:`Walmart`},{ticker:`INTC`,name:`Intel`},{ticker:`RELIANCE.NS`,name:`Reliance Industries`},{ticker:`TCS.NS`,name:`TCS`},{ticker:`INFY.NS`,name:`Infosys`},{ticker:`HDFCBANK.NS`,name:`HDFC Bank`},{ticker:`ICICIBANK.NS`,name:`ICICI Bank`},{ticker:`WIPRO.NS`,name:`Wipro`},{ticker:`TATAMOTORS.NS`,name:`Tata Motors`}]).map(q=>(0,x.jsxs)(`button`,{onClick:()=>t(q.ticker),style:{width:`100%`,display:`flex`,flexDirection:`column`,padding:`8px 10px`,borderRadius:`6px`,textAlign:`left`,cursor:`pointer`,marginBottom:`6px`,border:`1px solid`,borderColor:e===q.ticker?`var(--color-ink)`:`var(--color-hairline, rgba(255, 255, 255, 0.12))`,backgroundColor:e===q.ticker?`var(--color-surface-elevated)`:`rgba(255, 255, 255, 0.03)`,transition:`all 0.15s`},onMouseEnter:ev=>{if(e!==q.ticker)ev.currentTarget.style.backgroundColor=`var(--color-surface-deep)`},onMouseLeave:ev=>{if(e!==q.ticker)ev.currentTarget.style.backgroundColor=`transparent`},children:[(0,x.jsx)(`span`,{style:{fontFamily:`var(--font-mono)`,fontSize:`12px`,fontWeight:`700`,color:`var(--color-ink)`},children:q.ticker.replace(`.NS`,``)}),(0,x.jsx)(`span`,{style:{fontSize:`10px`,color:`var(--color-mute)`,overflow:`hidden`,textOverflow:`ellipsis`,whiteSpace:`nowrap`},children:q.name})]},q.ticker))]})]})),(0,x.jsx)(`div`,{style:{minWidth:0},children:(0,x.jsx)(zI,{ticker:e,data:n,loading:i,researchLoading:rL,onRefresh:()=>t(e),currency:u,exchangeRate:f})}),(0,x.jsxs)(`div`,{className:`bg-surface-card border border-hairline-strong rounded-lg p-4 flex flex-col gap-4`,style:{minWidth:0},children:[(0,x.jsxs)(`div`,{className:`flex items-center gap-1.5 border-b border-hairline pb-3`,children:[(0,x.jsx)(_,{className:`h-4 w-4 text-accent-yellow fill-accent-yellow`}),(0,x.jsx)(`span`,{className:`font-semibold text-ink text-xs`,children:`My Watchlist`})]}),(0,x.jsxs)(`div`,{style:{display:`flex`,flexDirection:`column`,gap:`8px`,maxHeight:`60vh`,overflowY:`auto`,paddingRight:`4px`},children:[c.map(n=>(0,x.jsxs)(`button`,{onClick:()=>t(n.ticker),style:{width:`100%`,display:`flex`,alignItems:`center`,justifyContent:`space-between`,padding:`10px`,borderRadius:`6px`,border:`1px solid`,borderColor:e===n.ticker?`var(--color-ink)`:`var(--color-hairline)`,backgroundColor:e===n.ticker?`var(--color-surface-elevated)`:`var(--color-surface-deep)`,textAlign:`left`,cursor:`pointer`,transition:`all 0.15s`},children:[(0,x.jsxs)(`div`,{children:[(0,x.jsx)(`span`,{style:{fontFamily:`var(--font-mono)`,fontSize:`11px`,fontWeight:`600`,display:`block`,color:`var(--color-ink)`},children:n.ticker}),(0,x.jsx)(`span`,{style:{fontSize:`10px`,color:`var(--color-stone)`,display:`block`,marginTop:`2px`,maxWidth:`90px`,overflow:`hidden`,textOverflow:`ellipsis`,whiteSpace:`nowrap`},children:n.name})]}),(0,x.jsxs)(`div`,{style:{textAlign:`right`},children:[(0,x.jsx)(`span`,{style:{fontSize:`11px`,fontWeight:`600`,fontFamily:`var(--font-mono)`,display:`block`,color:`var(--color-ink)`},children:((e,t)=>{let n=e;return t===`USD`&&u===`INR`?n=e*f:t===`INR`&&u===`USD`&&(n=e/f),`${u===`INR`?`₹`:`$`}${n.toLocaleString(void 0,{minimumFractionDigits:2,maximumFractionDigits:2})}`})(n.price,n.currency||`USD`)}),(0,x.jsx)(`span`,{style:{fontSize:`9px`,color:`var(--color-stone)`,display:`block`,marginTop:`2px`},children:n.sector})]})]},n.ticker)),c.length===0&&(0,x.jsx)(`div`,{style:{textAlign:`center`,padding:`32px 0`,fontSize:`11px`,color:`var(--color-mute)`},children:`Watchlist is empty. Star a stock to add.`})]})]})]})]})}
 export{BI as default};
