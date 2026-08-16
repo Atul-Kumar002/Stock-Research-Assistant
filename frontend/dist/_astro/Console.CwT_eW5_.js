@@ -190,7 +190,7 @@ function getInstantStockQuote(ticker) {
 function BI(){
 
   let [e, t] = (0, b.useState)(`NVDA`),
-      [n, r] = (0, b.useState)(null),
+      [n, r] = (0, b.useState)(()=>getInstantStockQuote(`NVDA`)),
       [i, a] = (0, b.useState)(!1),
       [rL, setRL] = (0, b.useState)(!1),
       [o, s] = (0, b.useState)([]),
