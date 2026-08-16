@@ -220,7 +220,7 @@
         const usdBtn = document.getElementById('currency-usd');
         const inrBtn = document.getElementById('currency-inr');
 
-        function updateUI(currency) {
+        function updateCurrencyUI(currency) {
           if (currency === 'INR') {
             usdBtn?.classList.remove('bg-white', 'text-black');
             usdBtn?.classList.add('text-mute', 'hover:text-ink');
@@ -234,21 +234,22 @@
           }
         }
 
-        // Initial load
-        let currency = localStorage.getItem('finance_assistant_currency') || 'USD';
-        updateUI(currency);
+        // Initialize currency
+        let curr = localStorage.getItem('finance_assistant_currency') || 'USD';
+        updateCurrencyUI(curr);
 
         usdBtn?.addEventListener('click', () => {
           localStorage.setItem('finance_assistant_currency', 'USD');
-          updateUI('USD');
+          updateCurrencyUI('USD');
           window.dispatchEvent(new CustomEvent('currencyChange', { detail: 'USD' }));
         });
 
         inrBtn?.addEventListener('click', () => {
           localStorage.setItem('finance_assistant_currency', 'INR');
-          updateUI('INR');
+          updateCurrencyUI('INR');
           window.dispatchEvent(new CustomEvent('currencyChange', { detail: 'INR' }));
         });
+
         // Theme Toggle script
         const themeBtn = document.getElementById('theme-toggle');
         const sunIcon = document.getElementById('theme-icon-sun');
@@ -275,6 +276,21 @@
           localStorage.setItem('finance_assistant_theme', next);
           updateTheme(next);
           window.dispatchEvent(new CustomEvent('themeChange', { detail: next }));
+        });
+
+        // Global Event Delegation for Company List clicks
+        document.addEventListener('click', function(e) {
+          const btn = e.target.closest('button');
+          if (!btn) return;
+
+          const tickerSpan = btn.querySelector('span.font-mono');
+          if (tickerSpan) {
+            const rawTicker = tickerSpan.textContent.trim();
+            if (rawTicker && rawTicker.length >= 1 && rawTicker.length <= 15) {
+              const fullTicker = (rawTicker === 'RELIANCE' || rawTicker === 'TCS' || rawTicker === 'INFY' || rawTicker === 'HDFCBANK' || rawTicker === 'ICICIBANK' || rawTicker === 'WIPRO' || rawTicker === 'TATAMOTORS') ? rawTicker + '.NS' : rawTicker;
+              window.dispatchEvent(new CustomEvent('tickerSelect', { detail: fullTicker }));
+            }
+          }
         });
       })();
     </script><astro-island uid="Z1q4d2P" prefix="r3" component-url="/_astro/GlobalChatbot.Bb7jPmKe.js" component-export="default" renderer-url="/_astro/client.B26HObld.js" props="{}" ssr client="load" opts="{&quot;name&quot;:&quot;GlobalChatbot&quot;,&quot;value&quot;:true}" await-children><div class="fixed bottom-6 right-6 z-50 font-sans"><button class="w-14 h-14 bg-white text-black hover:bg-white/95 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(255,255,255,0.15)] transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none cursor-pointer border border-white/20" title="Ask Finance Assistant AI"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square h-6 w-6 text-black" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg></button></div><!--astro:end--></astro-island></body></html>
